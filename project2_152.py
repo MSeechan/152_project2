@@ -1,45 +1,67 @@
-from abc import abstractmethod
-from typing import List
 
+# Professor class has a name and dictionary answer_key that has key=exam name (finals, midterm, etc.)
+# and answers values (single answer and set answer) because each professor can have multiple assessments.
+# Professor's single responsibility is to grade incoming tests.
 class Professor:
     def __init__(self, pname):
         self.professor_name = pname
-        self.answer_key = []
-    
+        self.answer_keys = {}
+        self.questions= {}
+     
+    def set_answer_key(self, ans1, ans2, ans3, Exam):
+        self.answer_keys[Exam.get_name()]=[ans1,ans2,ans3]
+       
+    def get_answer_key(self):
+        return self.answer_key
+
+    def grade_student_answers(self, Exam):
+        print(Exam.get_student_answers())
+        print('{} has student answer '.format(self.professor_name))
 
 
-
+# Students must be able to subscibe to exams, recieve exam questions, set and return answers to exam interface
 class Student:
     def __init__(self, sname):
         self.student_name = sname
-        self.student_answers = []
+
     def notify(self, Exam):
         print('{} recieved test: {}'.format(self.student_name, Exam.get_name()))
+
     def sub(self, Exam):
         Exam.subscribe(self)
         print('{} subbed to {}'.format(self.student_name, Exam.get_name()))
-    def take_exam(self, single, set):
-        self.student_answers = [single, set]
 
+    def take_exam(self, single_answer, Qset1_answer, Qset2_answer, Exam):
+        Exam.student_answers = [single_answer, {Qset1_answer, Qset2_answer}]
+        Exam.notify_exam_done()
+
+        
+    
+# Exam interface: at minimum, each Exam should be subscritable and must be able to notify all students/observers 
+# when there is a change of state (when the questions are ready)
 class Exam_Interface():
-    @abstractmethod
-    def __init__(self, name):pass
-    @abstractmethod
     def subscribe(self, student:Student): pass
-    @abstractmethod
     def notify_students(self): pass
 
+# Exam alerts keep roster of students and notifies them all. It routes student's answers to the respective exam's professor.
+# Sets are unordered so iteritive answer comparison is inaccurate. Exam questions are dictionaries consists of 1 question and a set to 
+# keep questions and answers together.
 class Exam(Exam_Interface):
-    def __init__(self, name):
+    def __init__(self, name, professor):
         self.exam_name = name
+        self.questions = {}
+        self.student_answers = []
         self.roster = []
-    
+        self.professor = professor
+ 
     def get_name(self):
         return self.exam_name
 
-    def set_questions(self, single, set):
-        self.question = single 
-        self.question_set = set
+    def set_questions(self, questions):
+        self.questions = questions
+
+    def get_student_answers(self):
+        return self.student_answers
 
     def subscribe(self, Student):
         self.roster.append(Student)
@@ -48,20 +70,54 @@ class Exam(Exam_Interface):
         for Student in self.roster:
             Student.notify(self)
     
+    def notify_exam_done(self):
+        print(self.exam_name,'done')
+        self.professor.grade_student_answers(self)
+          
+    
+
+"""-----------------------------------------------------------------------"""
+
+# An Exam is created with a associated professor reference. Students can subscribe to the exam class. Exam class 
+# hides the subscribers/roster from the professor and notifies all subscribers when the questions are set.
+
+student1 = Student('malee')
+cs_professor = Professor('Dr.Alex')
+midterm = Exam('midterm', cs_professor)
+student1.sub(midterm)
 
 
-midterm = Exam('midterm')
-finals = Exam('finals')
+# midterm.set_questions["Q1) What is the best pie flavor? \n1. apple \n2. cherry \n3. lemon \n4. peach \n5. blueberry"]="", {["Set) Select #1 \n1. 2. 3. 4. 5."]="", 
+# ["Set) Select #2 \n1. 2. 3. 4. 5."]=""}
 
-midterm.set_questions("What is the best pie flavor? 1)apple 2)cherry 3)lemon 4)peach 5)blueberry", {"select #1", "select #2"})
+midterm.set_questions({
+  "Q-single" : {
+    "What is the best pie flavor? \n1. apple \n2. cherry \n3. lemon \n4. peach \n5. blueberry" : 0,
+  },
+  "Q-set" : {
+    "The answer is 1" : 0 ,
+    "The other answer is 2" : 0
+  }
+})
 
-malee = Student('malee')
-malee.take_exam(1, {1,2})
+cs_professor.set_answer_key(5,1,2, midterm)
+
+midterm.notify_students()
+
+student1.take_exam(4, 5, 6, midterm)
+
+
+
+
+
+# cs_professor.set_answer_key(2, {1,2}, midterm)
+# student1.take_exam(1, {1,2}, midterm)
+
+# finals = Exam('finals', cs_professor)
 # mike = Student('mike')
-
-# malee.sub(midterm)
 # mike.sub(finals)
-
-# midterm.notify_students()
 # finals.notify_students()
+# mike.take_exam(1,{2,3},finals)
+# cs_professor.grade_student_answers(midterm)
+
 
