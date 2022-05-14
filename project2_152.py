@@ -1,4 +1,3 @@
-
 # Professor class has a name and dictionary answer_key that has key=exam name (finals, midterm, etc.)
 # and answers values (single answer and set answer) because each professor can have multiple assessments.
 # Professor's single responsibility is to grade incoming tests.
@@ -7,16 +6,36 @@ class Professor:
         self.professor_name = pname
         self.answer_keys = {}
         self.questions= {}
+        self.max_score = 0
+        self.score = 0
      
-    def set_answer_key(self, ans1, ans2, ans3, Exam):
-        self.answer_keys[Exam.get_name()]=[ans1,ans2,ans3]
+    def set_answer_key(self, answer_key, Exam):
+        self.answer_keys[Exam.get_name()] = answer_key
+    
+    # Get total number of questions (single and in the set)
+    def get_total_score(self, correct_answers):
+        for i in range(0, len(correct_answers)):
+            if type(correct_answers[i]) == list:
+                for j in correct_answers[i]:
+                    self.max_score+=1
+            else: self.max_score+=1
+        return self.max_score
        
-    def get_answer_key(self):
-        return self.answer_key
-
     def grade_student_answers(self, Exam):
-        print(Exam.get_student_answers())
-        print('{} has student answer '.format(self.professor_name))
+        student_answers=(Exam.get_student_answers())
+        correct_answers=(self.answer_keys[Exam.get_name()])
+        self.get_total_score(correct_answers)
+
+        for i in range(0, len(correct_answers)):
+            if type (correct_answers[i]) == list:
+                for student_ans, correct_ans in zip(student_answers[i], correct_answers[i]):
+                    if  (student_ans == correct_ans):
+                        self.score+=1
+            elif (student_answers[i] == correct_answers[i]):
+                self.score+=1
+
+        print('score', self.score,'/', self.max_score, '\t', self.score/self.max_score*100,'%')
+
 
 
 # Students must be able to subscibe to exams, recieve exam questions, set and return answers to exam interface
@@ -31,8 +50,8 @@ class Student:
         Exam.subscribe(self)
         print('{} subbed to {}'.format(self.student_name, Exam.get_name()))
 
-    def take_exam(self, single_answer, Qset1_answer, Qset2_answer, Exam):
-        Exam.student_answers = [single_answer, {Qset1_answer, Qset2_answer}]
+    def take_exam(self, answers, Exam):
+        Exam.student_answers = answers
         Exam.notify_exam_done()
 
         
@@ -49,7 +68,7 @@ class Exam_Interface():
 class Exam(Exam_Interface):
     def __init__(self, name, professor):
         self.exam_name = name
-        self.questions = {}
+        self.questions = []
         self.student_answers = []
         self.roster = []
         self.professor = professor
@@ -71,12 +90,9 @@ class Exam(Exam_Interface):
             Student.notify(self)
     
     def notify_exam_done(self):
-        print(self.exam_name,'done')
         self.professor.grade_student_answers(self)
           
-    
 
-"""-----------------------------------------------------------------------"""
 
 # An Exam is created with a associated professor reference. Students can subscribe to the exam class. Exam class 
 # hides the subscribers/roster from the professor and notifies all subscribers when the questions are set.
@@ -86,38 +102,23 @@ cs_professor = Professor('Dr.Alex')
 midterm = Exam('midterm', cs_professor)
 student1.sub(midterm)
 
-
-# midterm.set_questions["Q1) What is the best pie flavor? \n1. apple \n2. cherry \n3. lemon \n4. peach \n5. blueberry"]="", {["Set) Select #1 \n1. 2. 3. 4. 5."]="", 
-# ["Set) Select #2 \n1. 2. 3. 4. 5."]=""}
-
 midterm.set_questions({
   "Q-single" : {
     "What is the best pie flavor? \n1. apple \n2. cherry \n3. lemon \n4. peach \n5. blueberry" : 0,
   },
   "Q-set" : {
     "The answer is 1" : 0 ,
-    "The other answer is 2" : 0
+    "The other answer is 2" : 0,
+    "But this answer is 5" : 0
   }
 })
 
-cs_professor.set_answer_key(5,1,2, midterm)
+cs_professor.set_answer_key([5, 2, [1, 2, 5]], midterm)
 
 midterm.notify_students()
 
-student1.take_exam(4, 5, 6, midterm)
+student1.take_exam([5, 9, [3, 0, 5]], midterm)
 
 
-
-
-
-# cs_professor.set_answer_key(2, {1,2}, midterm)
-# student1.take_exam(1, {1,2}, midterm)
-
-# finals = Exam('finals', cs_professor)
-# mike = Student('mike')
-# mike.sub(finals)
-# finals.notify_students()
-# mike.take_exam(1,{2,3},finals)
-# cs_professor.grade_student_answers(midterm)
 
 
