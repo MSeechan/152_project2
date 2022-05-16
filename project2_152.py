@@ -24,12 +24,10 @@ class Professor:
                     self.max_score+=1
             else: self.max_score+=1
         return self.max_score
-
     
     def notify(self, Exam):
         print('{} received a completed {}'.format(self.professor_name, Exam.get_name()))
     
-       
     def grade_student_answers(self, Exam):
         self.max_score = 0
         correct_answers = (self.answer_keys[Exam.get_name()])
@@ -49,6 +47,7 @@ class Professor:
         Exam.notify_grades_done()
 
 # Students must be able to subscibe to exams, recieve exam questions, set and return answers to exam interface
+# Students get a notification when exams are finished grading and they can view their grade via get_report()
 class Student:
     def __init__(self, sname):
         self.student_name = sname
@@ -81,7 +80,7 @@ class Student:
     def notify_grade(self, Exam):
         print('{} {} grades are ready'.format(self.student_name, Exam.get_name()))
     
-    def get_grade(self,Exam):
+    def get_report(self,Exam):
         Exam.create_report(self)
     
 
@@ -147,12 +146,14 @@ class Exam(Exam_Abstract):
             print( ' ---------------------------------------------')
 
 
+#--main--
+# An Exam is created with a associated professor reference. Students can subscribe to the exam. Exam interface 
+# hides the subscribers/roster from the professor and notifies all subscribers when the exam is ready to be taken. 
+# It also notifies all subscribers when the professor is done grading. Each student can view their report.
 
-# An Exam is created with a associated professor reference. Students can subscribe to the exam. Exam class 
-# hides the subscribers/roster from the professor and notifies all subscribers when the questions are set.
-
+# Scenario where two students are subscribed to a midterm
 student1 = Student('malee')
-student2 = Student('Frank')
+student2 = Student('Javi')
 cs_professor = Professor('Dr.Alex')
 midterm = Exam('midterm', cs_professor)
 student1.sub(midterm)
@@ -179,12 +180,13 @@ midterm.set_questions({
 
 cs_professor.set_answer_key(midterm, 5, 2, [1, 2, 5], [1,2,3])
 midterm.notify_students()
-student1.take_exam(midterm, 1, 4, [3, 0, 2], [1,2,3])
+student1.take_exam(midterm, 1, 4, [3, 1, 2], [1,2,3])
 student2.take_exam(midterm, 5, 2, [1, 2, 5], [3,2,3])
 cs_professor.grade_student_answers(midterm)
-student1.get_grade(midterm)
-student2.get_grade(midterm)
+student1.get_report(midterm)
+student2.get_report(midterm)
 
+# Scenario when one student is subscribed to a final
 final = Exam('final', cs_professor)
 student1.sub(final)
 
@@ -206,7 +208,7 @@ cs_professor.set_answer_key(final, 2, [5,4,3],1)
 final.notify_students()
 student1.take_exam(final,2, [5,4,3],1)
 cs_professor.grade_student_answers(final)
-student1.get_grade(final)
+student1.get_report(final)
 
 
 
