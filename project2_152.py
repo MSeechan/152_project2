@@ -1,46 +1,27 @@
 from abc import ABC, abstractmethod
 
-# Professor class has a name and dictionary answer_key that has key=exam name (finals, midterm, etc.)
-# and answers values (single answer and set answer) because each professor can have multiple assessments.
 # Professor's responsibility is to grade incoming tests and send them back to the Exam interface.
 class Professor:
     def __init__(self, pname):
         self.professor_name = pname
-        self.answer_keys = {}
         self.questions= {}
-        self.max_score = 0
         self.score = 0
         self.percent = 0
-    
-    # Answer key is a dictionary where the key is the exam name and the value is the a list of answers for that exam
-    def set_answer_key(self, Exam, *answer_key):
-        self.answer_keys[Exam.get_name()] = answer_key
-    
-    # Get total number of questions (single and in the set)
-    def get_total_score(self, correct_answers):
-        for i in range(0, len(correct_answers)):
-            if type(correct_answers[i]) == list:
-                for j in correct_answers[i]:
-                    self.max_score+=1
-            else: self.max_score+=1
-        return self.max_score
-    
+
     def notify(self, Exam):
         print('{} received a completed {}'.format(self.professor_name, Exam.get_name()))
     
     def grade_student_answers(self, Exam):
-        self.max_score = 0
-        correct_answers = (self.answer_keys[Exam.get_name()])
-        self.get_total_score(correct_answers)
         for student in Exam.roster:
             self.score = 0
             student_answers = (student.get_student_answers())
-            for i in range(0, len(correct_answers)):
-                if type (correct_answers[i]) == list:
-                    for student_ans, correct_ans in zip(student_answers[i], correct_answers[i]):
-                        if  (student_ans == correct_ans):
-                            self.score+=1
-                elif (student_answers[i] == correct_answers[i]):
+        
+            for i in range(0,len(Exam.question_list)):
+                if type(Exam.question_list[i].question) is list:
+                    for j in range(0,len(Exam.question_list[i].question)):
+                        if (student_answers[i][j] == Exam.question_list[i].question[j].answer):
+                             self.score+=1
+                elif student_answers[i] == (Exam.question_list[i].answer):  
                     self.score+=1
             student.set_student_grade(self.score)
         print('{} finished grading all {}'.format((self.professor_name), Exam.get_name()))
@@ -82,34 +63,71 @@ class Student:
     
     def get_report(self,Exam):
         Exam.create_report(self)
+
+# Question objects are created and can be left as is or subsequently added into a set for composition
+class Question_Abstract(ABC):
+    @abstractmethod
+    def create_question(self): pass
+    @abstractmethod
+    def get_question(self): pass
+
+class SingleQuestion(Question_Abstract):
+    def __init__(self):
+        self.question = ""
+        self.answer = 0
+
+    def create_question(self, question, answer):
+        self.question = question
+        if (answer in range(1,6)):
+            self.answer = answer
+        else:    
+            print("Please provide answer as 1-5")
+        
+    def get_question(self):
+        return print('question',self.question)
     
+    def get_answer(self):
+        return print('answer',self.answer)
+        
+class SetQuestions(Question_Abstract):
+    def __init__(self):
+        self.question = []
+        self.question_qty = 0
+
+    def create_question(self, question):
+        self.question.append(question)
+        self.question_qty += 1
+    
+    def get_question(self):
+        return print('question',self.question)
 
 # Exam abstract class: at minimum, each Exam should be subscritable and must be able to notify all students/observers 
 # when there is a change of state (when the questions are ready). ABC enforces inheritence and acts as an interface.
 class Exam_Abstract(ABC):
     @abstractmethod
     def subscribe(self, student:Student): pass
-
     @abstractmethod
     def notify_students(self): pass
 
-# Exam alerts keep roster of students and notifies all subscribed students when a test is ready. It routes student's 
-# answers to the respective exam's professor. After grades are returned from a professor, reports are created for each 
-# subscriber.
+# Exam alerts keep roster of students and notifies all subscribed students when a test is ready. Question objects are 
+# saved to the Exam's question_list for composition. Student's answers are routed to the respective exam's professor. 
+# After gradeing is done, reports can be created for each subscriber.
+
 class Exam(Exam_Abstract):
     def __init__(self, name, professor):
         self.exam_name = name
-        self.questions = []
+        self.question_list = []
         self.roster = []
         self.professor = professor
+        self.max_score = 0
  
     def get_name(self):
         return self.exam_name
 
     def set_questions(self, questions):
-        self.questions = questions
+        self.question_list.append(questions)
 
-    def subscribe(self, Student):
+    def subscribe(self, Student): 
         self.roster.append(Student)
       
     def notify_students(self):
@@ -123,95 +141,73 @@ class Exam(Exam_Abstract):
         for student in self.roster:
             student.notify_grade(self)
     
+    def get_max_score(self):
+        self.max_score = 0
+        for question in self.question_list:
+            if type(question.question) is list:
+                self.max_score += len(question.question)
+            else: 
+                self.max_score +=1
+        return self.max_score
+  
     def create_report(self, Student):
             student_answers=(Student.get_student_answers())
-            correct_answers=(self.professor.answer_keys[self.get_name()])
-            print( ' ---------------------------------------------')
-            print(Student.student_name, self.get_name(), 'results:')
-            for i in range(0, len(correct_answers)):
-                if type (correct_answers[i]) == list:
-                    for student_ans, correct_ans in zip(student_answers[i], correct_answers[i]):
-                        if(student_ans==correct_ans):
-                            print('\tCorrect!:',student_ans)
+
+            print( Student.get_student_name(),'Report---------------------------------------------')
+            for i in range(0,len(self.question_list)):
+                if type(self.question_list[i].question) is list:
+                    for j in range(0,len(self.question_list[i].question)):
+                        if (student_answers[i][j] == self.question_list[i].question[j].answer):
+                               print('\tCorrect!:',student_answers[i][j])
                         else:
-                            print('\tIncorrect!: you:',student_ans, 'The correct answer:',correct_ans)
-                            
-                elif (student_answers[i] == correct_answers[i]):
-                        print('\tCorrect!:',student_answers[i])
+                                print('\tIncorrect! you:',student_answers[i][j], ', correct answer:',self.question_list[i].question[j].answer)
+                elif (student_answers[i] == self.question_list[i].answer):
+                    print('\tCorrect!:',student_answers[i])
                 else:
-                        print('\tIncorrect!: you:',student_answers[i], 'The correct answer:',correct_answers[i])
+                    print('\tIncorrect!: you:',student_answers[i], 'The correct answer:',self.question_list[i].answer)
+
+            self.professor.percent = Student.get_student_grade()/self.get_max_score()*100
+            print('',Student.get_student_name(),'score', Student.get_student_grade(), '/', self.max_score, '\t', self.professor.percent,'% ')
             
-            self.professor.percent = Student.get_student_grade()/self.professor.max_score*100
-            print('',Student.student_name,'score', Student.get_student_grade(), '/', self.professor.max_score, '\t', self.professor.percent,'% ')
-            print( ' ---------------------------------------------')
-
-
+           
 #--main--
-# An Exam is created with a associated professor reference. Students can subscribe to the exam. Exam interface 
+# An Exam is created withcreate_question a associated professor reference. Students can subscribe to the exam. Exam interface 
 # hides the subscribers/roster from the professor and notifies all subscribers when the exam is ready to be taken. 
-# It also notifies all subscribers when the professor is done grading. Each student can view their report.
+# It also notifies all subscribers when the professor is done grading. Each student can get their report.
 
-# Scenario where two students are subscribed to a midterm
+#Scenario where two students are subscribed to a midterm -- first create objects
 student1 = Student('malee')
 student2 = Student('Javi')
 cs_professor = Professor('Dr.Alex')
 midterm = Exam('midterm', cs_professor)
+
+#students subcribe to an exam
 student1.sub(midterm)
 student2.sub(midterm)
 
-midterm.set_questions({
-  "Q-single" : {
-    "What is the best pie flavor? \n1. apple \n2. cherry \n3. lemon \n4. peach \n5. blueberry" : 0,
-  }, 
-   "Q-single" : {
-    "What is the best snack? \n1. cake \n2. pie \n3. brownie \n4. candy \n5. fruit" : 0,
-  },
-  "setA" : {
-    "The answer is 1" : 0,
-    "The other answer is 2" : 0,
-    "But this answer is 5" : 0
-  },
-  "setB" : {
-    "The answer is 1" : 0,
-    "The answer is 2" : 0,
-    "The answer is 3" : 0
-  }
-})
+#Setup midterm questions
+question1 = SingleQuestion()
+question1.create_question("Q: Am I revising this?: \n1) Yes \t2) No \t3) Maybe \t4) Just turn it in \t5) I'll just try", 1)
+midterm.set_questions(question1)
 
-cs_professor.set_answer_key(midterm, 5, 2, [1, 2, 5], [1,2,3])
-midterm.notify_students()
-student1.take_exam(midterm, 1, 4, [3, 1, 2], [1,2,3])
-student2.take_exam(midterm, 5, 2, [1, 2, 5], [3,2,3])
+#Set of single questions
+question2 = SingleQuestion()
+question2.create_question("Q: The answer is 4", 4)
+question3 = SingleQuestion()
+question3.create_question("Q: The other answer is 2", 2)
+question4 = SingleQuestion()
+question4.create_question("Q: But this answer is 5", 5)
+
+question_set1 = SetQuestions()
+question_set1.create_question(question2)
+question_set1.create_question(question3)
+question_set1.create_question(question4)
+midterm.set_questions(question_set1)
+
+student1.take_exam(midterm,2,(4,1,5))
+student2.take_exam(midterm,1,(4,1,5))
 cs_professor.grade_student_answers(midterm)
 student1.get_report(midterm)
 student2.get_report(midterm)
-
-# Scenario when one student is subscribed to a final
-final = Exam('final', cs_professor)
-student1.sub(final)
-
-final.set_questions({
-  "Q-single" : {
-    "Is this a hard final? \n1. no \n2. yes \n3. maybe \n4. mostly \n5. it's okay" : 0,
-  },
-  "setA" : {
-    "The answer is 5" : 0,
-    "The answer is 4" : 0,
-    "The answer is 3" : 0
-  },
-  "Q-single" : {
-    "What grade should I get? \n1. A \n2. B \n3. C \n4. D \n5. E" : 0,
-  }
-})
-
-cs_professor.set_answer_key(final, 2, [5,4,3],1)
-final.notify_students()
-student1.take_exam(final,2, [5,4,3],1)
-cs_professor.grade_student_answers(final)
-student1.get_report(final)
-
-
-
-
 
 
